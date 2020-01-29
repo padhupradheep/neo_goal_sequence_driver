@@ -114,10 +114,10 @@ def goal_sequence_driver_run(cmd):
 	if(SERVICE_REQ):
 		return "goal_sequence_driver is already running."
 	else:
-		SERVICE_REQ = True
 		current_goal = -1
+		SERVICE_REQ = True
 		current_task_start = time.time()
-		rospy.loginfo("Task started: infi_param=" + str(infi_param))
+		rospy.loginfo("Task started: infi_param = " + str(infi_param))
 		return "Service requested."
 
 # callback function of service stop
@@ -127,8 +127,7 @@ def goal_sequence_driver_stop(cmd):
 
 	if(SERVICE_REQ):
 		SERVICE_REQ = False
-		client.cancel_all_goals()
-		rospy.loginfo("Stopped!")
+		rospy.loginfo("Stopping ...")
 		return "Shut down."
 	else:
 		return "goal_sequence_driver is not running."
@@ -176,36 +175,49 @@ if __name__ == '__main__':
 	# loop of goal_sequence_driver below:
 	while(not rospy.is_shutdown()):
 		time_waited = time.time() - time_send_goal
+
+		# check if we need to cancel current goal
+		if not SERVICE_REQ and current_goal >= 0:
+			client.cancel_all_goals()
+			current_goal = -1
+			rospy.loginfo("Cancelled all goals.")
+
 		# send goal one by one, on condition:
 			# 1) the robot is not busy
 			# 2) or waited for too long
 			# 3) and user called service "run"
-		if SERVICE_REQ and (not(client.get_state() == goal_status.PENDING or client.get_state() == goal_status.ACTIVE) or time_waited > patience):
-			# if there's any unprinted but reached goal, print its pose information and time duration of task
-			if(current_goal >= 0):
-				if(client.get_state() == goal_status.SUCCEEDED):
-					print_status()
-				elif(time_waited > patience):
-					rospy.loginfo("Time is up, going to next goal.")
+		if SERVICE_REQ:
+			# get current goal state
+			state = client.get_state()
+			# check if we need to do something in this cycle
+			if not(state == goal_status.PENDING or state == goal_status.ACTIVE) or time_waited > patience:
+				# if there's any unprinted but reached goal, print its pose information and time duration of task
+				if(current_goal >= 0):
+					if(state == goal_status.SUCCEEDED):
+						print_status()
+					elif(time_waited > patience):
+						rospy.logwarn("Time is up, going to next goal.")
+					else:
+						rospy.logerr("Goal failed: state = " + str(state))
+						rospy.sleep(1)
+				# if it hasn't reached the final goal, or waited too long, then go to next goal
+				if(not current_goal == final_goal):
+					current_goal += 1
+				# if it's already the final goal
 				else:
-					rospy.logerr("Goal failed: state=" + str(client.get_state()))
-			# if it hasn't reached the final goal, or waited too long, then go to next goal
-			if(not current_goal == final_goal):
-				current_goal += 1
-			# if it's already the final goal
-			else:
-				# if infi_param set to True, start the loop again from 1st goal
-				if(infi_param):
-					current_goal = first_goal
-				# if not, it doesn't send goal anymore
-				else:
-					current_goal = -1
-					SERVICE_REQ = False
-					continue
-			# drive the robot to the current_goal
-			client.send_goal(create_goal(mat[current_goal]))
-			rospy.loginfo("Sent goal " + str(current_goal) + ": " + str(mat[current_goal]))
-			time_send_goal = time.time()
+					# if infi_param set to True, start the loop again from 1st goal
+					if(infi_param):
+						current_goal = first_goal
+					# if not, it doesn't send goal anymore
+					else:
+						current_goal = -1
+						SERVICE_REQ = False
+						continue
+				# drive the robot to the current_goal
+				client.send_goal(create_goal(mat[current_goal]))
+				rospy.loginfo("Sent goal " + str(current_goal) + ": " + str(mat[current_goal]))
+				time_send_goal = time.time()
+
 		###############################
 		# add your own functions here #
 		###############################
