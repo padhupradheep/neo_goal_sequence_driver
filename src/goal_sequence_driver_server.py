@@ -80,11 +80,11 @@ def print_status():
 	rospy.loginfo("Goal reached: "+str(mat[current_goal]))
 	if(print_option == "all" or print_option == "local"):
 		# print time duration of current task
-		rospy.loginfo("Current task duration: "+str(time.time() - current_task_start)+"s")
+		rospy.loginfo("Current task duration: "+str(time.time() - current_task_start)+" s")
 	# if it is the last goal
 	if(current_goal == final_goal and (print_option == "all" or print_option == "total")):
-		rospy.loginfo("Total distance traveled is: "+str(dist)+"m")
-		rospy.loginfo("Total time traveled is: "+str(time.time() - time_start)+"s")
+		rospy.loginfo("Total distance traveled is: "+str(dist)+" m")
+		rospy.loginfo("Total time traveled is: "+str(time.time() - time_start)+" s")
 
 # callback function of odom subscriber
 def odom_callback(odometry):
@@ -187,6 +187,11 @@ if __name__ == '__main__':
 					print_status()
 				elif(time_waited > patience):
 					rospy.loginfo("Time is up, going to next goal.")
+<<<<<<< HEAD
+=======
+				else:
+					rospy.logerr("Goal failed: state=" + str(client.get_state()))
+>>>>>>> master
 			# if it hasn't reached the final goal, or waited too long, then go to next goal
 			if(not current_goal == final_goal):
 				current_goal += 1
